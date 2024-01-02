@@ -105,7 +105,7 @@ import { generateBuildId } from './generate-build-id'
 import { isWriteable } from './is-writeable'
 import * as Log from './output/log'
 import createSpinner from './spinner'
-import { trace, flushAllTraces, setGlobal, Span } from '../trace'
+import { trace, flushAllTraces, setGlobal, type Span } from '../trace'
 import {
   detectConflictingPaths,
   computeFromManifest,
