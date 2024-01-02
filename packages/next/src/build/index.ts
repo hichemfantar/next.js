@@ -105,7 +105,7 @@ import { generateBuildId } from './generate-build-id'
 import { isWriteable } from './is-writeable'
 import * as Log from './output/log'
 import createSpinner from './spinner'
-import { trace, flushAllTraces, setGlobal } from '../trace'
+import { trace, flushAllTraces, setGlobal, Span } from '../trace'
 import {
   detectConflictingPaths,
   computeFromManifest,
@@ -352,6 +352,20 @@ function pageToRoute(page: string) {
   }
 }
 
+async function getBuildId(
+  isGenerateMode: boolean,
+  distDir: string,
+  nextBuildSpan: Span,
+  config: NextConfigComplete
+) {
+  if (isGenerateMode) {
+    return await fs.readFile(path.join(distDir, 'BUILD_ID'), 'utf8')
+  }
+  return await nextBuildSpan
+    .traceChild('generate-buildid')
+    .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
+}
+
 export default async function build(
   dir: string,
   reactProductionProfiling = false,
@@ -407,15 +421,12 @@ export default async function build(
       setGlobal('phase', PHASE_PRODUCTION_BUILD)
       setGlobal('distDir', distDir)
 
-      let buildId: string = ''
-
-      if (isGenerateMode) {
-        buildId = await fs.readFile(path.join(distDir, 'BUILD_ID'), 'utf8')
-      } else {
-        buildId = await nextBuildSpan
-          .traceChild('generate-buildid')
-          .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
-      }
+      const buildId = await getBuildId(
+        isGenerateMode,
+        distDir,
+        nextBuildSpan,
+        config
+      )
       NextBuildContext.buildId = buildId
 
       const customRoutes: CustomRoutes = await nextBuildSpan
